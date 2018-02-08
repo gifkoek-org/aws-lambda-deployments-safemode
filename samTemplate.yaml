@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+# create a function and API gateway to return hello world
+
+#Input parameters - specify these at run-time
+#Parameters:
+#    someparameter:
+#        Type: String
+
+# global variable definitions
+Globals:
+  Function:
+    Runtime: python2.7
+    Timeout: 10
+
+Resources:
+  # helloworld function <- this is the main, actual function
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: aacorne-helloworld
+      Description: aacorne-helloworld
+      Handler: helloworld.lambda_handler
+      Role: arn:aws:iam::282415712953:role/aacorne-lambdainvoke-role
+      # set up versioning and an alias
+      AutoPublishAlias: prod
+      CodeUri: ./
+      Events:
+        GetResource:
+          Type: Api
+          # the event properties below have to match and point to the more detailed API Gateway spec
+          Properties:
+            Path: /
+            Method: get
+            RestApiId: !Ref HelloWorldAPIGateway
+      Tags:
+        Owner: aacorne
+        Status: active
+        Environment: development
+        Name: aacorne-helloworld
+      Tracing: Active
+      # safe mode, ie rolling deployments
+      DeploymentPreference:
+        Type: AllAtOnce
+        Alarms:
+          # A list of alarms that you want to monitor
+          #- !Ref AliasErrorMetricGreaterThanZeroAlarm
+          - !Ref LatestVersionErrorMetricGreaterThanZeroAlarm
+        #Hooks:
+          # Validation Lambda functions that are run before & after traffic shifting
+          #PreTraffic: !Ref PreTrafficLambdaFunction
+          #PostTraffic: !Ref PostTrafficLambdaFunction
+
+  # CW Alarm to monitor the new Lambda version for errors
+  LatestVersionErrorMetricGreaterThanZeroAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub aacorne-sam-predeployalarm-${HelloWorldFunction}
+      AlarmDescription: "pre-deployment alarm to check for errors in the function"
+      #AlarmActions:
+      #  - !Ref AlarmTopic
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref HelloWorldFunction.Version
+      EvaluationPeriods: 1
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Period: '60'
+      Statistic: Sum
+      Threshold: '1'
+
+  # API Gateway setup, points to the helloworld Lambda
+  # note !Ref function in LambdaFunction definition point to this resource, otherwise 2 API gateways will be created
+  HelloWorldAPIGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: aacorne-helloworld
+      StageName: prod
+      DefinitionBody:
+        swagger: 2.0
+        info:
+          title:
+            Ref: AWS::StackName
+        paths:
+          "/":
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                passthroughBehavior: when_no_match
+                uri:
+                  Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HelloWorldFunction.Alias}/invocations
+              responses: {}

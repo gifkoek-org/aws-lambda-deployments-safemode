@@ -1,0 +1,13 @@
+version: 0.1
+phases:
+  install:
+    commands:
+      - pip install requests
+      - aws cloudformation package
+          --template-file samTemplate.yaml
+          --s3-bucket lambdafunctions-frootloops
+          --output-template-file OutputSamTemplate.yaml
+artifacts:
+  type: zip
+  files:
+    - OutputSamTemplate.yaml
