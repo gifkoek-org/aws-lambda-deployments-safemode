@@ -19,8 +19,8 @@ Resources:
   HelloWorldFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: aacorne-helloworld
-      Description: aacorne-helloworld
+      FunctionName: aacorne-helloworld-safemode
+      Description: aacorne-helloworld-safemode
       Handler: helloworld.lambda_handler
       Role: arn:aws:iam::282415712953:role/aacorne-lambdainvoke-role
       # set up versioning and an alias
@@ -56,7 +56,7 @@ Resources:
   LatestVersionErrorMetricGreaterThanZeroAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmName: !Sub aacorne-sam-predeployalarm-${HelloWorldFunction}
+      AlarmName: !Sub aacorne-helloworl-safemode-predeployalarm-${HelloWorldFunction}
       AlarmDescription: "pre-deployment alarm to check for errors in the function"
       #AlarmActions:
       #  - !Ref AlarmTopic
@@ -76,7 +76,7 @@ Resources:
   HelloWorldAPIGateway:
     Type: AWS::Serverless::Api
     Properties:
-      Name: aacorne-helloworld
+      Name: aacorne-helloworld-safemode
       StageName: prod
       DefinitionBody:
         swagger: 2.0
